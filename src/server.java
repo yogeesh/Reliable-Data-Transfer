@@ -12,6 +12,8 @@ public class server extends fcntcp{
 	byte[] tempAppData = new byte[3*1000000];
 	int windowMax = 1428;
 	byte[] temp;
+	int fileSize = 0;
+	int ackNum = 0;
 	
 	server() throws IOException{
 		init();
@@ -21,29 +23,32 @@ public class server extends fcntcp{
 		socket = new DatagramSocket(super.port);
 		rcvPacket = new DatagramPacket(rcvBuffer, rcvBuffer.length);
 		
-		int dataSize = rcvPacketData();
-		byte[] appData = new byte[dataSize];
-		System.arraycopy(tempAppData, 0, appData, 0, dataSize);
+		//Receive packet to determine file size to be received.
+		socket.receive(rcvPacket);
+		rcvBuffer = rcvPacket.getData();
+		ackNum += 4;
+		sendAck();
 		
-		print.debug("Read data form client: " + dataSize);
-		print.info("MD5 hash of the data read: " + super.md5hash(appData));
+		temp = new byte[4];
+		System.arraycopy(rcvBuffer, 20, temp, 0, 4);
+		fileSize = ByteBuffer.wrap(temp).getInt();
+		
+		rcvAndAssembleData();
+//		int dataSize = rcvPacketData();
+//		byte[] appData = new byte[dataSize];
+//		System.arraycopy(tempAppData, 0, appData, 0, dataSize);
+		
+//		print.debug("Read data form client: " + dataSize);
+//		print.info("MD5 hash of the data read: " + super.md5hash(appData));
 	}
 	
-	public int rcvPacketData() throws IOException{
+	public int rcvAndAssembleData() throws IOException{
 		
 		int appDataIndex = 0;
 		int rcvIndex = 0;
 		int rcvLen = 0;
 		int windowBase = 0;
 		int windowIndex = 0;
-		int fileSize = 0;
-		
-		//Receive packet to determine file size to be received.
-		socket.receive(rcvPacket);
-		rcvBuffer = rcvPacket.getData();
-		temp = new byte[4];
-		System.arraycopy(rcvBuffer, 20, temp, 0, 4);
-		fileSize = ByteBuffer.wrap(temp).getInt();
 		
 		while(appDataIndex != fileSize){
 			
@@ -57,5 +62,10 @@ public class server extends fcntcp{
 		}
 		
 		return appDataIndex;
+	}
+	
+	public void sendAck(){
+		//TODO
+		//Set ACK bit and send class variable ack number in header.
 	}
 }

@@ -7,6 +7,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -19,6 +20,7 @@ public class client extends fcntcp{
 	int MSS = 536;
 	byte[] temp;
 	int windowSize = 4128;
+	int seqNum = 0;
 	
 	client() throws IOException{
 		init();
@@ -38,9 +40,17 @@ public class client extends fcntcp{
 			print.debug("File read of size: " + fileSize);
 			print.info("MD5 hash of the of the file: " + super.md5hash(data));
 			
+			
+			//Letting server know of the file Size to be sent
+			print.debug("Telling Server the file Size to be sent.");
+			temp = new byte[4];
+			temp = ByteBuffer.allocate(4).putInt(data.length).array();
+			createPacketSend(temp);
+			seqNum += 4;
+			
 		}
 		catch(IOException msg){
-			print.info("File could not be read. Check if file exists or check file permisssions");
+			print.debug("File could not be read. Check if file exists or check file permisssions");
 		}
 		
 		//Send data
@@ -49,6 +59,8 @@ public class client extends fcntcp{
 		
 		windowHandlePushData(data);
 		//createSendPacket(data);
+		
+		print.info("File transmitted!");
 		
 		server.close();
 	}
@@ -77,13 +89,20 @@ public class client extends fcntcp{
 		System.arraycopy(header, 0, packetData, 0, 20);
 		System.arraycopy(data, 0, packetData, 20, data.length);
 		
+		print.debug("Sending Packet: seq num = " + seqNum);
+		
 		DatagramPacket sendPacket = new DatagramPacket(packetData, packetData.length, serverAddress, super.port);
 		server.send(sendPacket);
+		
 	}
 	
 	public byte[] getHeader(){
 		byte[] header = new byte[20];
-		//TODO
+		
+		temp = new byte[4];
+		temp = ByteBuffer.allocate(4).putInt(seqNum).array();
+		System.arraycopy(temp, 0, header, 0, 4);
+		
 		return header;
 	}
 	
