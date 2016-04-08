@@ -1,5 +1,6 @@
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -19,6 +20,7 @@ public class fcntcp {
 	static boolean quiteMode;
 	static int timeout = 1000;
 	static print print = new print();
+	byte[] temp;
 	
 	public static void main(String[] args) throws IOException{
 		/**
@@ -84,5 +86,14 @@ public class fcntcp {
 			print.debug("Provided Algorithm does not exist!");
 		}
 		return hash;
+	}
+	
+	public int getAckNumber(byte[] data){
+		/**
+		 * extracts acknowledgement number form the packet
+		 */
+		temp = new byte[4];
+		System.arraycopy(data, 8, temp, 0, 4);
+		return (ByteBuffer.wrap(temp).getInt());
 	}
 }

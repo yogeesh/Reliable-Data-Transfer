@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 
 
 public class server extends fcntcp{
@@ -9,6 +10,8 @@ public class server extends fcntcp{
 	DatagramPacket rcvPacket;
 	DatagramSocket socket;
 	byte[] tempAppData = new byte[3*1000000];
+	int windowMax = 1428;
+	byte[] temp;
 	
 	server() throws IOException{
 		init();
@@ -31,14 +34,26 @@ public class server extends fcntcp{
 		int appDataIndex = 0;
 		int rcvIndex = 0;
 		int rcvLen = 0;
+		int windowBase = 0;
+		int windowIndex = 0;
+		int fileSize = 0;
 		
-		for(int i=0; i<4; i++){
+		//Receive packet to determine file size to be received.
+		socket.receive(rcvPacket);
+		rcvBuffer = rcvPacket.getData();
+		temp = new byte[4];
+		System.arraycopy(rcvBuffer, 20, temp, 0, 4);
+		fileSize = ByteBuffer.wrap(temp).getInt();
+		
+		while(appDataIndex != fileSize){
+			
 			socket.receive(rcvPacket);
 			rcvBuffer = rcvPacket.getData();
 			rcvLen = rcvPacket.getLength();
 			
 			System.arraycopy(rcvBuffer, 20, tempAppData, appDataIndex, rcvLen-20);
 			appDataIndex += rcvLen - 20;
+			//windowBase
 		}
 		
 		return appDataIndex;
