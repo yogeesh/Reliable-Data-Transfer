@@ -93,7 +93,16 @@ public class fcntcp {
 		 * extracts acknowledgement number form the packet
 		 */
 		temp = new byte[4];
-		System.arraycopy(data, 8, temp, 0, 4);
+		System.arraycopy(data, 4, temp, 0, 4);
+		return (ByteBuffer.wrap(temp).getInt());
+	}
+	
+	public int getSeqNumber(byte[] data){
+		/**
+		 * extracts acknowledgement number form the packet
+		 */
+		temp = new byte[4];
+		System.arraycopy(data, 0, temp, 0, 4);
 		return (ByteBuffer.wrap(temp).getInt());
 	}
 }

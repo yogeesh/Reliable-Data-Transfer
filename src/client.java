@@ -40,22 +40,20 @@ public class client extends fcntcp{
 			print.debug("File read of size: " + fileSize);
 			print.info("MD5 hash of the of the file: " + super.md5hash(data));
 			
+			server = new DatagramSocket();
+			serverAddress = InetAddress.getByName(super.serverAdrress);
 			
 			//Letting server know of the file Size to be sent
 			print.debug("Telling Server the file Size to be sent.");
 			temp = new byte[4];
 			temp = ByteBuffer.allocate(4).putInt(data.length).array();
 			createPacketSend(temp);
-			seqNum += 4;
 			
 		}
 		catch(IOException msg){
 			print.debug("File could not be read. Check if file exists or check file permisssions");
+			System.exit(1);
 		}
-		
-		//Send data
-		server = new DatagramSocket();
-		serverAddress = InetAddress.getByName(super.serverAdrress);
 		
 		windowHandlePushData(data);
 		//createSendPacket(data);
@@ -69,17 +67,27 @@ public class client extends fcntcp{
 		int dataIndex = 0;
 		int windowBase = 0;
 		int windowIndex = 0;
+		int tempSeqNum = seqNum;
+		int sendDataLen = 0;
 		
-		while(dataIndex < fileSize){
+		do{
 			dataIndex = windowBase;
 			do{
-				temp = new byte[MSS];
-				System.arraycopy(data, dataIndex, temp, 0, MSS);
-				createPacketSend(temp);
-				dataIndex += MSS;
-			}while((dataIndex-windowBase <= 1428) || dataIndex < fileSize);
-			windowBase = rcvCheckAck(dataIndex);
-		}
+				if (dataIndex+MSS > fileSize)
+					sendDataLen = fileSize - dataIndex;
+				else
+					sendDataLen = MSS;
+				temp = new byte[sendDataLen];
+				System.arraycopy(data, dataIndex, temp, 0, sendDataLen);
+//				if(dataIndex%540 == 0)
+//					print.info("skipping a packet");
+//				else
+					createPacketSend(temp);
+				dataIndex += sendDataLen;
+			}while((dataIndex-windowBase <= 1428) && dataIndex < fileSize);
+			seqNum = rcvCheckAck(dataIndex);
+			windowBase = seqNum - tempSeqNum;
+		}while(dataIndex < fileSize);
 	}
 	
 	public void createPacketSend(byte[] data) throws IOException{
@@ -94,6 +102,7 @@ public class client extends fcntcp{
 		DatagramPacket sendPacket = new DatagramPacket(packetData, packetData.length, serverAddress, super.port);
 		server.send(sendPacket);
 		
+		seqNum += data.length;
 	}
 	
 	public byte[] getHeader(){
@@ -118,6 +127,7 @@ public class client extends fcntcp{
 			try{
 				server.receive(rcvPacket);
 				ackNum = getAckNumber(rcvPacket.getData());
+				print.debug("Received Ack Packet: Ack Num = " + ackNum);
 				if (ackNum > maxAckNum)  
 					maxAckNum = ackNum;
 			}catch(SocketTimeoutException oops){
