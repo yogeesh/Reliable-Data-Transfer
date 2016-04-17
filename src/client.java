@@ -17,11 +17,15 @@ public class client extends fcntcp{
 	DatagramSocket server;
 	InetAddress serverAddress;
 	int fileSize;
-	int MSS = 536;
+	int MSS = 1440;
 	byte[] temp;
 	int seqNum = 0;
 	
+	//fast retransmit varibales
+	int count = 0;
+	int prevAck = 0;
 	
+	// skip test variable
 	int skip = 0;
 			
 			
@@ -99,7 +103,7 @@ public class client extends fcntcp{
 			windowBase = seqNum - tempSeqNum;
 			dataIndex = windowBase;
 		}while(dataIndex < fileSize);
-		print.debug("" + dataIndex + " " + seqNum + " " + tempSeqNum);
+		//print.debug("" + dataIndex + " " + seqNum + " " + tempSeqNum);
 	}
 	
 	public void createPacketSend(byte[] data) throws IOException{
@@ -116,17 +120,17 @@ public class client extends fcntcp{
 		
 		print.debug("[Send]Sending Packet: seq num = " + seqNum + " data size: " + tempData.length);
 		
-		
 		DatagramPacket sendPacket = new DatagramPacket(packetData, packetData.length, serverAddress, super.port);
-			
-//		if (skip%5 == 0)
-//			print.debug("skipped packet");
-//		else
+		
+		//cheap skip test
+		if (skip%5 == 0)
+			print.debug("skipped packet");
+		else
 			server.send(sendPacket);
 		skip++;
 		
 		seqNum += tempData.length;
-		print.debug("seq num changed to " + seqNum);
+		//print.debug("seq num changed to " + seqNum);
 	}
 	
 	public byte[] addSeqNum(){
@@ -143,6 +147,7 @@ public class client extends fcntcp{
 		server.setSoTimeout(super.timeout); 
 		int maxAckNum = -1;
 		int ackNum = 0;
+		count = 0;
 		
 		byte[] rcvBuffer = new byte[20];
 		DatagramPacket rcvPacket = new DatagramPacket(rcvBuffer, rcvBuffer.length);;
@@ -158,8 +163,18 @@ public class client extends fcntcp{
 					
 				ackNum = getAckNumber(rcvBuffer);
 				print.debug("[Rcv]Received Ack Packet: Ack Num = " + ackNum);
+				
 				if (ackNum > maxAckNum)  
 					maxAckNum = ackNum;
+				
+				//fast retransmit implementation
+				if(prevAck == maxAckNum){
+					count++;
+					if (count >= 3)
+						return maxAckNum;
+				}
+				prevAck = maxAckNum;
+				
 			}catch(SocketTimeoutException oops){
 				return maxAckNum;
 			}

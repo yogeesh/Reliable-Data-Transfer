@@ -21,6 +21,7 @@ public class server extends fcntcp{
 	int sendPort;
 	int expSeqNum= 0;
 	
+	
 	server() throws IOException{
 		init();
 	}

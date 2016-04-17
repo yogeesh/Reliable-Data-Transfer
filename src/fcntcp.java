@@ -25,8 +25,7 @@ public class fcntcp {
 	static print print = new print();
 	byte[] temp;
 	int windowSize = 64000;
-
-	
+		
 	public static void main(String[] args) throws IOException{
 		/**
 		 * Parsing all the input populating class variables
@@ -129,7 +128,7 @@ public class fcntcp {
 		System.arraycopy(temp, 0, tempData, 12, 2);
 		checkPacketChecksum = calChecksum(tempData);
 		
-		print.debug("rcv checksum = " + packetChecksum + " cal checksum = " + checkPacketChecksum);
+		//print.debug("rcv checksum = " + packetChecksum + " cal checksum = " + checkPacketChecksum);
 		
 		if (packetChecksum == checkPacketChecksum)
 			return false;
@@ -188,7 +187,7 @@ public class fcntcp {
 		temp = ByteBuffer.allocate(4).putInt(checksum).array();
 		System.arraycopy(temp, 2, tempData, 12, 2);
 		
-		print.debug("Added checksum = " + checksum);
+		//print.debug("Added checksum = " + checksum);
 		checkPacketCorruption(tempData);
 		return tempData;
 	}
