@@ -122,12 +122,12 @@ public class client extends fcntcp{
 		
 		DatagramPacket sendPacket = new DatagramPacket(packetData, packetData.length, serverAddress, super.port);
 		
-		//cheap skip test
-		if (skip%5 == 0)
-			print.debug("skipped packet");
-		else
+//		//cheap skip test
+//		if (skip%5 == 0)
+//			print.debug("skipped packet");
+//		else
 			server.send(sendPacket);
-		skip++;
+//		skip++;
 		
 		seqNum += tempData.length;
 		//print.debug("seq num changed to " + seqNum);

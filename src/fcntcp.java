@@ -24,7 +24,7 @@ public class fcntcp {
 	static int timeout = 1000;
 	static print print = new print();
 	byte[] temp;
-	int windowSize = 64000;
+	int windowSize = 16000;// choosing window XP default window Size
 		
 	public static void main(String[] args) throws IOException{
 		/**

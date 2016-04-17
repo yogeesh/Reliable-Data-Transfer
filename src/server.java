@@ -21,6 +21,8 @@ public class server extends fcntcp{
 	int sendPort;
 	int expSeqNum= 0;
 	
+	int count = 0;
+	int prevAck;
 	
 	server() throws IOException{
 		init();
@@ -103,6 +105,7 @@ public class server extends fcntcp{
 				sendAck(ackNum);
 				continue;
 			}
+			
 						
 			if(seqNum != expSeqNum){
 				// unexpected sequence number: loss or corruption detected.
@@ -137,8 +140,20 @@ public class server extends fcntcp{
 //		temp = ByteBuffer.allocate(4).putInt(checksum).array();
 //		System.arraycopy(temp, 2, header, 12, 2);
 		
-		print.debug("Sending Ack Packet: Ack num = " + num);
-		DatagramPacket sendPacket = new DatagramPacket(header, header.length, clientAdd, sendPort);
-	    socket.send(sendPacket);
+		//stop duplicate ack's
+		if(prevAck == num){
+			if (count <= 3)
+				count++;
+		}
+		else{
+			count = 0;
+			prevAck = num;
+		}
+		
+		if (count <= 3){
+			print.debug("Sending Ack Packet: Ack num = " + num);
+			DatagramPacket sendPacket = new DatagramPacket(header, header.length, clientAdd, sendPort);
+			socket.send(sendPacket);
+		}
 	}
 }
