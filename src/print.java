@@ -1,4 +1,3 @@
-
 public class print extends fcntcp{
 	
 	public void debug(String message){

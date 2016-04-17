@@ -19,9 +19,12 @@ public class client extends fcntcp{
 	int fileSize;
 	int MSS = 536;
 	byte[] temp;
-	int windowSize = 4128;
 	int seqNum = 0;
 	
+	
+	int skip = 0;
+			
+			
 	client() throws IOException{
 		init();
 	}
@@ -47,8 +50,13 @@ public class client extends fcntcp{
 			print.debug("Telling Server the file Size to be sent.");
 			temp = new byte[4];
 			temp = ByteBuffer.allocate(4).putInt(data.length).array();
-			createPacketSend(temp);
 			
+			do{
+				seqNum = 0;
+				temp = ByteBuffer.allocate(4).putInt(data.length).array();
+				createPacketSend(temp);
+			}while(rcvCheckAck(4) != 4);
+			seqNum = 4;
 		}
 		catch(IOException msg){
 			print.debug("File could not be read. Check if file exists or check file permisssions");
@@ -69,43 +77,59 @@ public class client extends fcntcp{
 		int windowIndex = 0;
 		int tempSeqNum = seqNum;
 		int sendDataLen = 0;
-		
+		int ackFailSafeCheck;
+				
 		do{
-			dataIndex = windowBase;
 			do{
+				
 				if (dataIndex+MSS > fileSize)
 					sendDataLen = fileSize - dataIndex;
 				else
 					sendDataLen = MSS;
 				temp = new byte[sendDataLen];
 				System.arraycopy(data, dataIndex, temp, 0, sendDataLen);
-//				if(dataIndex%540 == 0)
-//					print.info("skipping a packet");
-//				else
-					createPacketSend(temp);
+
+				createPacketSend(temp);
 				dataIndex += sendDataLen;
-			}while((dataIndex-windowBase <= 1428) && dataIndex < fileSize);
-			seqNum = rcvCheckAck(dataIndex);
+			}while((dataIndex-windowBase <= windowSize) && dataIndex < fileSize);
+			// to handle wrong ack numbers
+			ackFailSafeCheck = rcvCheckAck(dataIndex);
+			if ((ackFailSafeCheck-tempSeqNum) <= dataIndex && (ackFailSafeCheck-tempSeqNum) >= windowBase)
+				seqNum = ackFailSafeCheck;
 			windowBase = seqNum - tempSeqNum;
+			dataIndex = windowBase;
 		}while(dataIndex < fileSize);
+		print.debug("" + dataIndex + " " + seqNum + " " + tempSeqNum);
 	}
 	
 	public void createPacketSend(byte[] data) throws IOException{
-		byte[] header = getHeader();
+		byte[] header = addSeqNum();
 		byte[] packetData = new byte[data.length + 20];
-			
-		System.arraycopy(header, 0, packetData, 0, 20);
-		System.arraycopy(data, 0, packetData, 20, data.length);
 		
-		print.debug("Sending Packet: seq num = " + seqNum);
+		byte[] tempData = new byte[data.length];
+		System.arraycopy(data, 0, tempData, 0, data.length);
+		
+		System.arraycopy(header, 0, packetData, 0, 20);
+		System.arraycopy(tempData, 0, packetData, 20, tempData.length);
+		
+		packetData = addChecksum(packetData);
+		
+		print.debug("[Send]Sending Packet: seq num = " + seqNum + " data size: " + tempData.length);
+		
 		
 		DatagramPacket sendPacket = new DatagramPacket(packetData, packetData.length, serverAddress, super.port);
-		server.send(sendPacket);
+			
+//		if (skip%5 == 0)
+//			print.debug("skipped packet");
+//		else
+			server.send(sendPacket);
+		skip++;
 		
-		seqNum += data.length;
+		seqNum += tempData.length;
+		print.debug("seq num changed to " + seqNum);
 	}
 	
-	public byte[] getHeader(){
+	public byte[] addSeqNum(){
 		byte[] header = new byte[20];
 		
 		temp = new byte[4];
@@ -117,23 +141,29 @@ public class client extends fcntcp{
 	
 	public int rcvCheckAck(int expEndAckNum) throws IOException{
 		server.setSoTimeout(super.timeout); 
-		int maxAckNum = 0;
+		int maxAckNum = -1;
 		int ackNum = 0;
 		
 		byte[] rcvBuffer = new byte[20];
 		DatagramPacket rcvPacket = new DatagramPacket(rcvBuffer, rcvBuffer.length);;
 		
-		while(ackNum < expEndAckNum)
+		while(ackNum < expEndAckNum){
 			try{
 				server.receive(rcvPacket);
-				ackNum = getAckNumber(rcvPacket.getData());
-				print.debug("Received Ack Packet: Ack Num = " + ackNum);
+				rcvBuffer = rcvPacket.getData();
+				
+				//checking for packet corruption
+				if(super.checkPacketCorruption(rcvBuffer))
+					continue;
+					
+				ackNum = getAckNumber(rcvBuffer);
+				print.debug("[Rcv]Received Ack Packet: Ack Num = " + ackNum);
 				if (ackNum > maxAckNum)  
 					maxAckNum = ackNum;
 			}catch(SocketTimeoutException oops){
 				return maxAckNum;
 			}
-				
+		}
 		return maxAckNum;
 	}
 }
