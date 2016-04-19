@@ -1,6 +1,0 @@
-DEBUG: File read of size: 5120
-INFO: MD5 hash of the of the file: 31878d0793116d15fc857161d6dcff16
-DEBUG: Telling Server the file Size to be sent.
-DEBUG: Added checksum = 60415
-DEBUG: Sending Packet: seq num = 0
-DEBUG: skipped packet

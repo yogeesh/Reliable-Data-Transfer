@@ -24,14 +24,15 @@ public class fcntcp {
 	static int timeout = 1000;
 	static print print = new print();
 	byte[] temp;
-	int windowSize = 16000;// choosing window XP default window Size
+	int windowSize = 1440*20;
 		
 	public static void main(String[] args) throws IOException{
 		/**
 		 * Parsing all the input populating class variables
 		 * for further processing.
 		 */
-		int argIndex = 0; //ingnoring java and tsapp
+		
+		int argIndex = 0; //ignoring java and tsapp
 		
 		for(int i = argIndex; i<args.length; i++){
 			switch(args[i]){
@@ -67,17 +68,26 @@ public class fcntcp {
 	/**
 	 * Initiate Server or Client according to the argument provided
 	 */
+	long startTime = System.currentTimeMillis();
+
 	if(args[0].equals("-s"))
 		new server();
 	else
 		new client();
+	
+	// Calculating Time for transmission
+	long endTime = System.currentTimeMillis();
+	print.info("Total time taken to complete transfer and receiveing is less than " + (endTime - startTime));
 	}
 	
 	
+	/**
+	 * Generates Md5 hash of the provided plain text
+	 * 
+	 * @param plaintext: array of bytes
+	 * @return
+	 */
 	public String md5hash(byte[] plaintext){
-		/**
-		 * Generates Md5 hash of the provided plain text
-		 */
 		MessageDigest m;
 		String hash = "Null hash";
 		try {
@@ -111,6 +121,13 @@ public class fcntcp {
 	}
 	
 	
+	/**
+	 * Checks for packet corruption using standard TCP checksum
+	 * process and return true or false
+	 * @param data: takes the packet data
+	 * @return true: packet is corrupted
+	 * 		   false: packet is not corrupted
+	 */
 	public boolean checkPacketCorruption(byte[] data){
 		int packetChecksum;
 		int checkPacketChecksum;
@@ -177,6 +194,12 @@ public class fcntcp {
 		return (~sum)&0xFFFF;
 	}
 	
+	/**
+	 * Adds checksum to the header of the packet.
+	 * Follows TCP header packet format.
+	 * @param data
+	 * @return
+	 */
 	public byte[] addChecksum(byte[] data){
 		int checksum = calChecksum(data);
 		

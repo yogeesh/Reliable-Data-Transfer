@@ -27,16 +27,19 @@ public class client extends fcntcp{
 	
 	// skip test variable
 	int skip = 0;
-			
-			
+	
+	
 	client() throws IOException{
 		init();
 	}
 	
+	/**
+	 * Read file into Byes array and send the file data in 
+	 * batches of windows.
+	 * 
+	 * @throws IOException
+	 */
 	public void init() throws IOException{
-		/**
-		 * Read file into Byes array.
-		 */
 		try{
 			InputStream file = new FileInputStream(super.fileName);
 			fileSize = (int)new File(super.fileName).length();
@@ -75,6 +78,12 @@ public class client extends fcntcp{
 		server.close();
 	}
 	
+	
+	/**
+	 * 
+	 * @param data
+	 * @throws IOException
+	 */
 	public void windowHandlePushData(byte[] data) throws IOException{
 		int dataIndex = 0;
 		int windowBase = 0;
@@ -97,9 +106,10 @@ public class client extends fcntcp{
 				dataIndex += sendDataLen;
 			}while((dataIndex-windowBase <= windowSize) && dataIndex < fileSize);
 			// to handle wrong ack numbers
-			ackFailSafeCheck = rcvCheckAck(dataIndex);
-			if ((ackFailSafeCheck-tempSeqNum) <= dataIndex && (ackFailSafeCheck-tempSeqNum) >= windowBase)
-				seqNum = ackFailSafeCheck;
+//			ackFailSafeCheck = rcvCheckAck(dataIndex);
+//			if ((ackFailSafeCheck-tempSeqNum) <= dataIndex && (ackFailSafeCheck-tempSeqNum) >= windowBase)
+//				seqNum = ackFailSafeCheck;
+			 seqNum = rcvCheckAck(dataIndex);
 			windowBase = seqNum - tempSeqNum;
 			dataIndex = windowBase;
 		}while(dataIndex < fileSize);
@@ -122,7 +132,7 @@ public class client extends fcntcp{
 		
 		DatagramPacket sendPacket = new DatagramPacket(packetData, packetData.length, serverAddress, super.port);
 		
-//		//cheap skip test
+		//cheap skip test
 //		if (skip%5 == 0)
 //			print.debug("skipped packet");
 //		else

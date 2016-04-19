@@ -12,7 +12,7 @@ public class server extends fcntcp{
 	DatagramPacket rcvPacket;
 	DatagramSocket socket;
 	byte[] tempAppData = new byte[3*1000000];
-	int windowMax = 64000;
+	//int windowMax = 64000;
 	byte[] temp;
 	int fileSize = 0;
 	int ackNum = 0;
@@ -20,9 +20,8 @@ public class server extends fcntcp{
 	InetAddress clientAdd;
 	int sendPort;
 	int expSeqNum= 0;
-	
 	int count = 0;
-	int prevAck;
+	int prevAckNum = 0;
 	
 	server() throws IOException{
 		init();
@@ -105,7 +104,6 @@ public class server extends fcntcp{
 				sendAck(ackNum);
 				continue;
 			}
-			
 						
 			if(seqNum != expSeqNum){
 				// unexpected sequence number: loss or corruption detected.
@@ -140,18 +138,16 @@ public class server extends fcntcp{
 //		temp = ByteBuffer.allocate(4).putInt(checksum).array();
 //		System.arraycopy(temp, 2, header, 12, 2);
 		
-		//stop duplicate ack's
-		if(prevAck == num){
-			if (count <= 3)
-				count++;
-		}
+		print.debug("Sending Ack Packet: Ack num = " + num);
+		
+		if(num == prevAckNum)
+			count++;
 		else{
 			count = 0;
-			prevAck = num;
+			prevAckNum = num;
 		}
 		
-		if (count <= 3){
-			print.debug("Sending Ack Packet: Ack num = " + num);
+		if (count <= 4){
 			DatagramPacket sendPacket = new DatagramPacket(header, header.length, clientAdd, sendPort);
 			socket.send(sendPacket);
 		}
